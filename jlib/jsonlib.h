@@ -8,8 +8,7 @@
 
 typedef struct {
     char *name;         // Key name
-    char **str_values;  // For string values (NULL if it's an int list)
-    int *int_values;    // For integer arrays (NULL if it's a string value)
+    int *int_values;
     int num_values;     // Number of elements in the list
 } Pair;
 

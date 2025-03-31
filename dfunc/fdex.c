@@ -1,7 +1,7 @@
 #include "fdex.h"
 
-int execute_function(Item item, int *arg) {
-    return item.func(arg); // Example value passed to the function
+int execute_function(Item item, int argc, int *argv) {
+    return item.func(argc, argv); // Example value passed to the function
 }
 
 Item get_by_name(Item *items, char *name) {

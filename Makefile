@@ -10,3 +10,7 @@ all:
 
 clean:
 	rm -rf bin
+
+run:
+	clear
+	./bin/tester

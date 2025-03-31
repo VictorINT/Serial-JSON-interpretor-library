@@ -17,6 +17,8 @@ Pair* json_to_pairs(char *json) {
             ptr++;
         }
 
+        if (*ptr == '\0') break; // Exit if we reach the end
+
         // Parse key
         if (*ptr == '"') {
             ptr++;
@@ -35,8 +37,7 @@ Pair* json_to_pairs(char *json) {
             ptr++;
         }
 
-        // Parse value
-        char **str_values = NULL;
+        // Parse value (integers only)
         int *int_values = NULL;
         int num_values = 0;
 
@@ -45,41 +46,76 @@ Pair* json_to_pairs(char *json) {
             while (*ptr != ']' && *ptr != '\0') {
                 while (*ptr == ' ' || *ptr == ',') ptr++;  // Skip whitespace and commas
 
-                if (isdigit(*ptr)) {  // Handle integer values
-                    int val = strtol(ptr, &ptr, 10);
-                    int_values = realloc(int_values, (num_values + 1) * sizeof(int));
-                    int_values[num_values] = val;
-                    num_values++;
+                if (*ptr == ']') break; // Check for empty array or end of array
+
+                if (isdigit(*ptr) || *ptr == '-') {  // Handle integer values
+                    char *end;
+                    int val = strtol(ptr, &end, 10);
+                    if (end != ptr) { // Make sure we actually parsed a number
+                        ptr = end; // Update pointer position
+                        int_values = realloc(int_values, (num_values + 1) * sizeof(int));
+                        if (int_values == NULL) {
+                            fprintf(stderr, "Memory reallocation failed\n");
+                            free(key);
+                            return NULL;
+                        }
+                        int_values[num_values] = val;
+                        num_values++;
+                    } else {
+                        ptr++; // Avoid infinite loop
+                    }
+                } else {
+                    ptr++; // Skip any other characters to avoid infinite loop
                 }
             }
             if (*ptr == ']') ptr++;  // Skip closing bracket
-        } else if (*ptr == '"') {  // Handle string value
-            ptr++;
-            char *start = ptr;
-            while (*ptr != '"' && *ptr != '\0') ptr++;
-            if (*ptr == '"') {
-                char *value = strndup(start, ptr - start);
-                ptr++;
-
-                str_values = malloc(sizeof(char *));
-                str_values[0] = value;
+        } else if (isdigit(*ptr) || *ptr == '-') {  // Handle single numeric value
+            char *end;
+            int val = strtol(ptr, &end, 10);
+            if (end != ptr) { // Make sure we actually parsed a number
+                ptr = end; // Update pointer position
+                int_values = malloc(sizeof(int));
+                if (int_values == NULL) {
+                    fprintf(stderr, "Memory allocation failed\n");
+                    free(key);
+                    return NULL;
+                }
+                int_values[0] = val;
                 num_values = 1;
+            } else {
+                ptr++; // Avoid infinite loop
             }
+        } else {
+            // Skip non-integer values
+            while (*ptr != ',' && *ptr != '}' && *ptr != '\0') ptr++;
         }
 
-        // Store the pair
-        if (key) {
+        // Store the pair if we have a key and values
+        if (key && num_values > 0) {
             pairs = realloc(pairs, (count + 1) * sizeof(Pair));
             if (pairs == NULL) {
                 fprintf(stderr, "Memory reallocation failed\n");
+                free(key);
+                free(int_values);
                 return NULL;
             }
-
             pairs[count].name = key;
-            pairs[count].str_values = str_values;
             pairs[count].int_values = int_values;
             pairs[count].num_values = num_values;
+            
+            // Safe printing
+            puts("Pair added:");
+            // puts(pairs[count].name);
+            for (int i = 0; i < num_values; i++) {
+                printf("%d ", pairs[count].int_values[i]);
+            }
+            printf("\n");
+            
             count++;
+            key = NULL;
+        } else if (key) {
+            // Free the key if we didn't find any values for it
+            free(key);
             key = NULL;
         }
     }
@@ -91,7 +127,6 @@ Pair* json_to_pairs(char *json) {
         return NULL;
     }
     pairs[count].name = NULL;
-    pairs[count].str_values = NULL;
     pairs[count].int_values = NULL;
     pairs[count].num_values = 0;
 
@@ -101,10 +136,6 @@ Pair* json_to_pairs(char *json) {
 void free_pairs(Pair *pairs) {
     for (int i = 0; pairs[i].name != NULL; i++) {
         free(pairs[i].name);
-        if (pairs[i].str_values) {
-            free(pairs[i].str_values[0]);  // Free the single string
-            free(pairs[i].str_values);
-        }
         if (pairs[i].int_values) {
             free(pairs[i].int_values);  // Free the int array
         }
