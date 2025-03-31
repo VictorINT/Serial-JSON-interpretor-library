@@ -1,24 +1,22 @@
 #include "../serialjson.h"
 
 int main() {
-    //! example 1 (usage of function dectionary)
-    int *values = (int *)malloc(4 * sizeof(int));
-    values[0] = 4; // Count of values
-    values[1] = 1; // First value
-    values[2] = 2; // Second value
-    values[3] = 3; // Third value
-    execute_function(get_by_name(ITEMS, "led1"), 4, values); // Test the function directly
-    free(values);
+    //! example file
+    char *json = "{\"led1\": [1, 2, 3, 4], \"servo2\": 90, \"DC1\": 3, \"fan\": 1}";
 
-    //! example 2 (usage of JSON to function detection)
-    char *simplejson = "{\"led1\": [1, 2, 3, 4], \"servo2\": 90, \"DC1\": 3, \"fan\": 1}";
-
-    Pair *pairs = json_to_pairs(simplejson);
+    Pair *pairs = json_to_pairs(json);
     if (pairs == NULL) {
         fprintf(stderr, "Failed to parse JSON\n");
         return 1;
     }
 
+    int index = 0;
+    while(pairs[index].name != NULL){
+        execute_function(get_by_name(ITEMS, pairs[index].name), pairs[index].num_values, pairs[index].int_values);
+        index++;
+    }
+
+    free_pairs(pairs); // Free the pairs after use
     return 0;
 }
 
